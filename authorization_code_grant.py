@@ -94,10 +94,11 @@ class ClientApplication(object):
     auth_uri = "https://localhost:8080/authorize"
     token_uri = "https://localhost:8080/token"
 
-    def __init__(self):
+    def __init__(self, certfile):
         self.access_token = None
         self.auth_code = None
         self.token_type = ""
+        self.certfile = certfile
         # instantiate the oauth2.0 flow
         self.flow = OAuth2WebServerFlow(client_id=self.client_id,
                                         client_secret=self.client_secret,
@@ -123,7 +124,7 @@ class ClientApplication(object):
     def _request_access_token(self):
         print("Requesting access token...")
 
-        http = httplib2.Http(disable_ssl_certificate_validation=True)
+        http = httplib2.Http(ca_certs=self.certfile)
         # 2nd step of oauth flow: exchange auth token for access token
         credentials = self.flow.step2_exchange(self.auth_code, http)
 
@@ -164,8 +165,8 @@ class ClientApplication(object):
             return "200 OK", str(confirmation), {}
 
 
-def run_app_server():
-    app = ClientApplication()
+def run_app_server(certfile):
+    app = ClientApplication(certfile)
 
     try:
         httpd = make_server('', 8081, app, handler_class=ClientRequestHandler)
@@ -206,7 +207,7 @@ def run_auth_server(certfile):
 def main(certfile):
     auth_server = Process(target=partial(run_auth_server, certfile))
     auth_server.start()
-    app_server = Process(target=run_app_server)
+    app_server = Process(target=partial(run_app_server, certfile))
     app_server.start()
     print("Access http://localhost:8081/app in your browser")
 
