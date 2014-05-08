@@ -1,0 +1,3 @@
+- create self signed certificate: openssl req -new -x509 -keyout server.pem -out server.pem -days 365 -nodes
+- install: python setup.py install
+- run with cert.pem: python authorization_code_grant.py /location/of/cert.pem

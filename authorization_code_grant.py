@@ -1,3 +1,4 @@
+from functools import partial
 import ssl
 import urlparse
 import signal
@@ -13,6 +14,7 @@ from oauth2.tokengenerator import Uuid4
 from oauth2.web import SiteAdapter, Wsgi
 from oauth2.grant import AuthorizationCodeGrant
 from oauth2client.client import OAuth2WebServerFlow
+import sys
 
 
 class ClientRequestHandler(WSGIRequestHandler):
@@ -174,7 +176,7 @@ def run_app_server():
         httpd.server_close()
 
 
-def run_auth_server():
+def run_auth_server(certfile):
     try:
         client_store = ClientStore()
         client_store.add_client(client_id="abc", client_secret="xyz",
@@ -193,7 +195,7 @@ def run_auth_server():
         app = Wsgi(server=auth_controller)
 
         httpd = make_server('', 8080, app, handler_class=OAuthRequestHandler)
-        httpd.socket = ssl.wrap_socket(httpd.socket, certfile='/home/marc/server.pem', server_side=True)
+        httpd.socket = ssl.wrap_socket(httpd.socket, certfile=certfile, server_side=True)
 
         print("Starting implicit_grant oauth2 server on https://localhost:8080/...")
         httpd.serve_forever()
@@ -201,8 +203,8 @@ def run_auth_server():
         httpd.server_close()
 
 
-def main():
-    auth_server = Process(target=run_auth_server)
+def main(certfile):
+    auth_server = Process(target=partial(run_auth_server, certfile))
     auth_server.start()
     app_server = Process(target=run_app_server)
     app_server.start()
@@ -219,4 +221,8 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+
+    try:
+        main(sys.argv[1])
+    except IndexError:
+        print "Need location for cert.pem"
